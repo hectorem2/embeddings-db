@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <curl/curl.h>
+#include <json/json.h>
 
 #include "common.h"
 
@@ -25,6 +26,8 @@ class HTTPModelService
 
   void clean_up() noexcept;
 
+  Json::Value post_json(const Json::Value& json);
+
 public:
 
   HTTPModelService();
@@ -34,6 +37,8 @@ public:
   HTTPModelService& operator=(const HTTPModelService&) = delete;
 
   virtual ~HTTPModelService();
+
+  std::vector<float> get_embedding(const char* str);
 
   void get_embeddings_and_set(std::vector<TextUnit>& text_units);
 

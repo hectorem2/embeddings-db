@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <json/json.h>
 
 #include "HTTPModelService.h"
 
@@ -60,31 +59,13 @@ void HTTPModelService::clean_up() noexcept
 }
 
 
-// Function to make the API call
-void HTTPModelService::get_embeddings_and_set(std::vector<TextUnit>& text_units)
+Json::Value HTTPModelService::post_json(const Json::Value& json)
 {
-  // Prepare the JSON payload
-  Json::Value request_data;
-
-  if (!model_name.empty())
-  {
-    request_data["model"] = model_name;
-  }
-
-  Json::Value input_arr(Json::arrayValue);
-
-  for (const TextUnit& unit : text_units)
-  {
-    input_arr.append(Json::Value(unit.text()));
-  }
-
-  request_data["input"] = input_arr;
-
   // Convert the payload to string
   Json::StreamWriterBuilder builder;
   std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
   std::stringstream post_sstream;
-  writer->write(request_data, &post_sstream);
+  writer->write(json, &post_sstream);
 
   // Set up the curl options
   curl_slist* headers = NULL;
@@ -143,6 +124,81 @@ void HTTPModelService::get_embeddings_and_set(std::vector<TextUnit>& text_units)
     std::string msg("Failed to parse response from API:\n");
     throw std::runtime_error(msg + errs);
   }
+
+  return response_json;
+}
+
+
+std::vector<float> HTTPModelService::get_embedding(const char* str)
+{
+  // Prepare the JSON payload
+  Json::Value request_data;
+
+  if (!model_name.empty())
+  {
+    request_data["model"] = model_name;
+  }
+
+  request_data["input"] = str;
+
+  Json::Value response_json = post_json(request_data);
+
+  Json::Value embeddings = get_json_member_with_type(response_json, "data",
+    Json::ValueType::arrayValue);
+  Json::Value::ArrayIndex embd_c = embeddings.size();
+
+  if (embd_c != 1)
+  {
+    std::string msg("The number of embeddings returned was ");
+    msg += std::to_string(embd_c);
+    msg += " for a single string";
+    throw std::runtime_error(msg);
+  }
+
+  Json::Value embd_obj = embeddings[0];
+  Json::Value embd_arr = get_json_member_with_type(embd_obj, "embedding",
+    Json::ValueType::arrayValue);
+
+  std::vector<float> embd_floats;
+  Json::Value::ArrayIndex embd_size = embd_arr.size();
+  embd_floats.reserve(embd_size);
+  for (Json::Value::ArrayIndex float_idx = 0; float_idx < embd_size;
+    float_idx++)
+  {
+    Json::Value float_obj = embd_arr[float_idx];
+    if (!float_obj.isNumeric())
+    {
+      throw std::runtime_error("element of \"embedding\" array is not a "
+        "number");
+    }
+
+    embd_floats.push_back(float_obj.asFloat());
+  }
+
+  return embd_floats;
+}
+
+
+void HTTPModelService::get_embeddings_and_set(std::vector<TextUnit>& text_units)
+{
+  // Prepare the JSON payload
+  Json::Value request_data;
+
+  if (!model_name.empty())
+  {
+    request_data["model"] = model_name;
+  }
+
+  Json::Value input_arr(Json::arrayValue);
+
+  for (const TextUnit& unit : text_units)
+  {
+    input_arr.append(Json::Value(unit.text()));
+  }
+
+  request_data["input"] = input_arr;
+
+  Json::Value response_json = post_json(request_data);
 
   Json::Value embeddings = get_json_member_with_type(response_json, "data",
     Json::ValueType::arrayValue);

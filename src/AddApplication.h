@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "HTTPModelService.h"
+#include "PostgreSqlDb.h"
 
 
 class AddApplication
@@ -31,6 +32,7 @@ class AddApplication
   };
 
   Json::Value config_root;
+  std::unique_ptr<Database> database;
   std::vector<processor_for_mime_type> file_processors;
   magic_t magic_hdl;
   HTTPModelService model_service;

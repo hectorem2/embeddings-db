@@ -4,7 +4,8 @@ add_executable(embeddings-db-add
     common.cpp
     HTMLFileProcessor.cpp
     HTTPModelService.cpp
-    OpenDocProcessor.cpp)
+    OpenDocProcessor.cpp
+    PostgreSqlDb.cpp)
 
 target_include_directories(embeddings-db-add PRIVATE
     CURL::libcurl
@@ -26,3 +27,23 @@ target_link_libraries(embeddings-db-add
     PostgreSQL::PostgreSQL)
 
 target_compile_features(embeddings-db-add PRIVATE cxx_std_17)
+
+
+add_executable(embeddings-db-search
+    embeddings-db-search.cpp
+    common.cpp
+    HTTPModelService.cpp
+    PostgreSqlDb.cpp
+    SearchApplication.cpp)
+
+target_include_directories(embeddings-db-search PRIVATE
+    CURL::libcurl
+    JsonCpp::JsonCpp
+    PostgreSQL::PostgreSQL)
+
+target_link_libraries(embeddings-db-search
+    CURL::libcurl
+    JsonCpp::JsonCpp
+    PostgreSQL::PostgreSQL)
+
+target_compile_features(embeddings-db-search PRIVATE cxx_std_17)

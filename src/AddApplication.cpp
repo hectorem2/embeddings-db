@@ -19,6 +19,7 @@ const char* const open_doc_mime_types[] = {
 
 
 AddApplication::AddApplication():
+  database(),
   magic_hdl(magic_open(MAGIC_MIME_TYPE))
 {
   using std::placeholders::_1;
@@ -90,6 +91,60 @@ int AddApplication::run(int argc, char** argv)
 
   model_service.set_embeddings_api_url(embd_api_url);
   model_service.set_model_name(model_name);
+
+  Json::Value pgsql_settings = get_json_member_with_type(config_root,
+    "postgresql", Json::ValueType::objectValue, false);
+
+  if (pgsql_settings)
+  {
+    std::string dbname;
+    std::string user;
+    std::string password;
+    std::string host;
+    std::string port;
+
+    Json::Value value = get_json_member_with_type(pgsql_settings, "dbname",
+      Json::ValueType::stringValue, false);
+    if (value) dbname = value.asString();
+
+    value = get_json_member_with_type(pgsql_settings, "user",
+      Json::ValueType::stringValue, false);
+    if (value) user = value.asString();
+
+    value = get_json_member_with_type(pgsql_settings, "password",
+      Json::ValueType::stringValue, false);
+    if (value) password = value.asString();
+
+    value = get_json_member_with_type(pgsql_settings, "host",
+      Json::ValueType::stringValue, false);
+    if (value) host = value.asString();
+
+    value = get_json_member_with_type(pgsql_settings, "port",
+      Json::ValueType::stringValue, false);
+    if (value) port = value.asString();
+
+    database.reset(new PostgreSqlDb(dbname.empty() ? nullptr : dbname.c_str(),
+      user.empty() ? nullptr : user.c_str(),
+      password.empty() ? nullptr : password.c_str(),
+      host.empty() ? nullptr : host.c_str(),
+      port.empty() ? nullptr : port.c_str()));
+  }
+  else
+  {
+    std::cerr << "No database settings found in the settings file. "
+      "Connecting to a local PostgreSQL database with the default values...\n";
+    database.reset(new PostgreSqlDb(nullptr, nullptr, nullptr, nullptr,
+      nullptr));
+  }
+
+  if (database)
+  {
+    database->set_database_up();
+  }
+  else
+  {
+    throw std::runtime_error("database is empty");
+  }
 
   for (int pos = 1; pos < argc; pos++)
   {
@@ -195,6 +250,13 @@ void AddApplication::process_one_file(const char* file_path)
   }
 
   model_service.get_embeddings_and_set(text_units_staged);
+
+  FileRecord file_record;
+  file_record.file_path(file_path);
+  file_record.text_units(text_units_staged);
+
+  database->save_file_record_with_text_units(file_record);
+
   text_units_staged.clear();
 }
 
