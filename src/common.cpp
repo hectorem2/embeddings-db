@@ -6,6 +6,7 @@
 #include <ios>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 #include <arpa/inet.h>
 
@@ -172,7 +173,7 @@ Json::Value get_settings_from_default_json_file()
     {
       std::string msg("Cannot open file \"");
       msg += file_path.string();
-      msg += "\".";
+      msg += "\" for writing.";
       throw std::ios_base::failure(msg);
     }
     writer->write(root, &dest_stream);
@@ -236,4 +237,92 @@ bool is_all_spaces(const char* str)
   }
 
   return true;
+}
+
+
+bool is_separator(char c)
+{
+  return std::isspace(static_cast<unsigned char>(c)) ||
+    c == '.' || c == ',' || c == ';' || c == ':';
+}
+
+
+std::vector<std::string>
+split_text(const std::string& text, std::size_t max_len)
+{
+  std::vector<std::string> result;
+  std::size_t i = 0;
+
+  while (i < text.size())
+  {
+    // Remaining text fits
+    if (i + max_len >= text.size())
+    {
+      result.push_back(text.substr(i));
+      break;
+    }
+
+    std::size_t j = i + max_len;
+
+    // Scan backwards to find a new line
+    while (j > i && text[j] != '\n')
+      --j;
+
+    if (j == i)
+    {
+      // Retry for some other separator
+      j = i + max_len;
+      while (j > i && !is_separator(text[j]))
+        --j;
+    }
+
+    if (j == i)
+    {
+      // No separator found -> hard cut
+      // TODO: Make this Unicode-aware
+      result.push_back(text.substr(i, max_len));
+      i += max_len;
+    }
+    else
+    {
+      result.push_back(text.substr(i, j - i));
+      i = j + 1; // skip the separator
+    }
+  }
+
+  return result;
+}
+
+
+void trim_string(std::string& str)
+{
+  if (str.size() == 0)
+    return;
+
+  std::size_t idx;
+
+  for (idx = str.size() - 1; ; idx--)
+  {
+    if (!isspace(static_cast<unsigned char>(str[idx])))
+      break;
+
+    if (idx == 0)
+    {
+      str.clear();
+      return;
+    }
+  }
+
+  if (idx < str.size() - 1)
+    str.erase(idx + 1);
+
+  std::size_t size = str.size();
+
+  for (idx = 0; idx < size; idx++)
+  {
+    if (!isspace(static_cast<unsigned char>(str[idx])))
+      break;
+  }
+
+  str.erase(0, idx);
 }

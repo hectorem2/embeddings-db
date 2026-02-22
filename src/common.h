@@ -25,6 +25,13 @@ uint32_t htonf(float f);
 
 bool is_all_spaces(const char* str);
 
+bool is_separator(char c);
+
+std::vector<std::string>
+split_text(const std::string& text, std::size_t max_len);
+
+void trim_string(std::string& str);
+
 
 class ModelInfo
 {

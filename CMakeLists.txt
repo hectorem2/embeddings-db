@@ -35,3 +35,4 @@ set(LIBREOFFICE_LIBRARIES
     "uno_cppuhelpergcc3")
 
 add_subdirectory(src)
+add_subdirectory(tests)

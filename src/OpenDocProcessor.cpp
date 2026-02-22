@@ -36,8 +36,37 @@ using com::sun::star::text::XTextDocument;
 using com::sun::star::text::XTextRange;
 
 
+void OpenDocProcessor::call_on_text_unit_and_clear()
+{
+    trim_string(curr_text);
+
+    if (curr_text.empty())
+      return;
+
+    if (curr_text.size() > max_bytes_per_text_unit)
+    {
+      std::vector parts = split_text(curr_text, max_bytes_per_text_unit);
+      for (std::string& p : parts)
+      {
+        TextUnit unit;
+        unit.text(p);
+        _on_text_unit_func(unit);
+      }
+    }
+    else
+    {
+      TextUnit unit;
+      unit.text(curr_text);
+      _on_text_unit_func(unit);
+    }
+
+    curr_text.clear();
+}
+
+
 OpenDocProcessor::
 OpenDocProcessor(std::function<void(const TextUnit&)> on_text_unit_func):
+  max_bytes_per_text_unit(4096),
   _on_text_unit_func(on_text_unit_func)
 {
   // Initialize LibreOffice environment
@@ -96,16 +125,7 @@ void OpenDocProcessor::process_file(const char* file_path)
     sal_Int16 outlineLevel = 0;
     xParProps->getPropertyValue("OutlineLevel") >>= outlineLevel;
 
-    if (outlineLevel == 1)
-    {
-      if (!curr_text.empty())
-      {
-        TextUnit unit;
-        unit.text(curr_text);
-        _on_text_unit_func(unit);
-        curr_text.clear();
-      }
-    }
+    std::string par_text;
 
     while (xTexts->hasMoreElements())
     {
@@ -113,22 +133,25 @@ void OpenDocProcessor::process_file(const char* file_path)
       css::uno::Reference<XTextRange> xTextRange(xTextInfo, css::uno::UNO_QUERY_THROW);
       rtl::OUString u16text = xTextRange->getString();
       rtl::OString u8text = u16text.toUtf8();
-
-      if (!(is_all_spaces(u8text.getStr()) && u8text.getLength() > 1))
-      {
-        curr_text += u8text.getStr();
-      }
+      par_text += u8text.getStr();
     }
 
-    if (!curr_text.empty())
-      curr_text += "\n";
+    trim_string(par_text);
+
+    // We wouldn't like to begin a text unit with an empty heading.
+    if (outlineLevel == 1 && !par_text.empty())
+    {
+      call_on_text_unit_and_clear();
+    }
+    else
+    {
+      trim_string(curr_text);
+      if (!curr_text.empty())
+        curr_text += "\n";
+    }
+
+    curr_text += par_text;
   }
 
-  if (!curr_text.empty())
-  {
-    TextUnit unit;
-    unit.text(curr_text);
-    _on_text_unit_func(unit);
-    curr_text.clear();
-  }
+  call_on_text_unit_and_clear();
 }

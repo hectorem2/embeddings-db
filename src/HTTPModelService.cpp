@@ -107,7 +107,7 @@ Json::Value HTTPModelService::post_json(const Json::Value& json)
     std::string msg("Received HTTP status ");
     msg += std::to_string(http_status);
     std::cerr << msg << "\n";
-    std::cerr << "Response ***\n" << response_body << "\n";
+    std::cerr << "*** Response ***\n" << response_body << "\n";
     throw std::runtime_error(msg);
   }
 

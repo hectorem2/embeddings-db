@@ -217,7 +217,7 @@ PostgreSqlDb::search(const std::vector<float>& embedding)
     unit_res.unit.text(v);
 
     v = PQgetvalue(r, idx, 2);
-    unsigned long long frecord_res_id = strtoull(v, nullptr, 10);
+    unsigned long frecord_res_id = strtoull(v, nullptr, 10);
 
     std::shared_ptr<FileRecord> fr_for_unit;
     for (std::shared_ptr<FileRecord>& record : frecords)

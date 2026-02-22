@@ -11,6 +11,7 @@ class HTMLFileProcessor : public FileProcessor
 {
   std::string curr_tag;
   std::string curr_text;
+  uint16_t max_bytes_per_text_unit;
   std::function<void(const TextUnit&)> _on_text_unit_func;
   htmlSAXHandler sax_handler;
   bool text_retrieved;
@@ -23,6 +24,8 @@ class HTMLFileProcessor : public FileProcessor
   static void on_end_document_func(void* ctx);
 
   static void on_end_element_func(void* ctx, const xmlChar* name);
+
+  void call_on_text_unit_and_clear();
 
 public:
 

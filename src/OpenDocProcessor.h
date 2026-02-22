@@ -14,6 +14,7 @@
 class OpenDocProcessor : public FileProcessor
 {
   std::string curr_text;
+  uint16_t max_bytes_per_text_unit;
   std::function<void(const TextUnit&)> _on_text_unit_func;
 
   css::uno::Reference<css::uno::XComponentContext> xComponentContext;
@@ -21,6 +22,7 @@ class OpenDocProcessor : public FileProcessor
   css::uno::Reference<css::frame::XDesktop> xDesktop;
   css::uno::Reference<css::lang::XMultiComponentFactory> xMultiComponentFactory;
 
+  void call_on_text_unit_and_clear();
 public:
 
   OpenDocProcessor(std::function<void(const TextUnit&)> on_text_unit_func);

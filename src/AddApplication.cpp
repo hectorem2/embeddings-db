@@ -202,6 +202,8 @@ process_given_file_or_directory(const std::filesystem::path& path_obj)
 
 void AddApplication::process_one_file(const char* file_path)
 {
+  text_units_staged.clear();
+
   std::cerr << "Processing file " << file_path << "\n";
   const char* mime_type = magic_file(magic_hdl, file_path);
 
@@ -218,6 +220,8 @@ void AddApplication::process_one_file(const char* file_path)
   }
 
   std::cerr << "MIME type: " << mime_type << "\n";
+
+  bool processed = false;
   for (processor_for_mime_type& p : file_processors)
   {
     bool have_match = false;
@@ -246,18 +250,49 @@ void AddApplication::process_one_file(const char* file_path)
       }
 
       p.processor->process_file(file_path);
+      processed = true;
     }
   }
 
-  model_service.get_embeddings_and_set(text_units_staged);
+  if (!processed)
+  {
+    std::cerr << "MIME type not supported\n";
+    return;
+  }
+
+  if (text_units_staged.empty())
+  {
+    std::cerr << "It looks like this file doesn't contain any text at all! "
+      "Skipping...\n";
+    return;
+  }
+
+  try
+  {
+    model_service.get_embeddings_and_set(text_units_staged);
+  }
+  catch (std::runtime_error& ex)
+  {
+    std::cerr << "*** ERROR: Generating the embedding for a text unit of the "
+      "file \"" << file_path << "\" failed. \n" << ex.what() << "\n";
+    return;
+  }
 
   FileRecord file_record;
   file_record.file_path(file_path);
   file_record.text_units(text_units_staged);
 
-  database->save_file_record_with_text_units(file_record);
+  try
+  {
+    database->save_file_record_with_text_units(file_record);
+  }
+  catch (std::runtime_error& ex)
+  {
+    std::cerr << "*** ERROR: Saving the embeddings to the database for a text "
+     "unit of the file \"" << file_path << "\" failed. \n" << ex.what() <<
+     "\n";
+  }
 
-  text_units_staged.clear();
 }
 
 
